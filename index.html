@@ -17,5 +17,15 @@
     <noscript>This game requires JavaScript.</noscript>
     <script src="/src/vendor/qrcode.js"></script>
     <script type="module" src="/src/main.js"></script>
+    <script>
+      const updateDiscardWording = () => {
+        const note = document.querySelector('.discard-heading small');
+        const button = document.querySelector('#take-discard');
+        if (note) note.textContent = 'Only the top card is visible';
+        if (button) button.textContent = 'Take top discard';
+      };
+      new MutationObserver(updateDiscardWording).observe(document.body, { childList: true, subtree: true });
+      updateDiscardWording();
+    </script>
   </body>
 </html>
