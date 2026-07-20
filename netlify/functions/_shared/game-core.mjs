@@ -17,7 +17,7 @@ export function createRoom(code) {
     status: 'lobby',
     round: 0,
     targetScore: 500,
-    startingHandSize: 13,
+    startingHandSize: 7,
     players: [],
     deck: [],
     discard: [],
