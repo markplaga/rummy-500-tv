@@ -1,6 +1,7 @@
 const SUITS = ['clubs', 'diamonds', 'hearts', 'spades'];
 const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const STARTING_HAND_SIZE = 11;
 
 export function createRoomCode(length = 6) {
   let code = '';
@@ -17,7 +18,7 @@ export function createRoom(code) {
     status: 'lobby',
     round: 0,
     targetScore: 500,
-    startingHandSize: 7,
+    startingHandSize: STARTING_HAND_SIZE,
     players: [],
     deck: [],
     discard: [],
@@ -140,6 +141,7 @@ export function addPlayer(room, { name, id, token }) {
 
 export function startRound(room) {
   if (room.players.length !== 2) throw new GameError('Two players are required.');
+  room.startingHandSize = STARTING_HAND_SIZE;
   const deck = shuffle(createDeck());
   room.round += 1;
   room.status = 'playing';
@@ -180,18 +182,13 @@ function drawDeck(room, player) {
   log(room, `${player.name} drew from the deck.`);
 }
 
-function drawDiscard(room, player, discardIndex) {
-  const index = Number(discardIndex);
-  if (!Number.isInteger(index) || index < 0 || index >= room.discard.length) {
-    throw new GameError('Choose a valid card from the discard pile.');
-  }
-  const chosen = room.discard[index];
-  const taken = room.discard.splice(index);
-  player.hand.push(...taken);
+function drawDiscard(room, player) {
+  const top = room.discard.pop();
+  if (!top) throw new GameError('The discard pile is empty.');
+  player.hand.push(top);
   room.turnStage = 'play';
-  // Only a buried discard must be melded immediately. The top discard may simply be taken.
-  room.mustMeldCardId = taken.length > 1 ? chosen.id : null;
-  log(room, `${player.name} picked up ${taken.length} card${taken.length === 1 ? '' : 's'} from the discard pile.`);
+  room.mustMeldCardId = null;
+  log(room, `${player.name} picked up the top discard.`);
 }
 
 function layMeld(room, player, cardIds, requestedType) {
@@ -204,9 +201,6 @@ function layMeld(room, player, cardIds, requestedType) {
   if (!actualType || (requestedType && requestedType !== actualType)) {
     throw new GameError(requestedType === 'set' ? 'Those cards do not form a valid set.' : 'Those cards do not form a valid run.');
   }
-  if (room.mustMeldCardId && !cardIds.includes(room.mustMeldCardId)) {
-    throw new GameError('The buried discard you selected must be used in this meld.');
-  }
   player.hand = removeCards(player.hand, cardIds);
   room.melds.push({
     id: crypto.randomUUID(),
@@ -214,8 +208,9 @@ function layMeld(room, player, cardIds, requestedType) {
     ownerId: player.id,
     cards: sortMeld(cards, actualType)
   });
-  if (room.mustMeldCardId && cardIds.includes(room.mustMeldCardId)) room.mustMeldCardId = null;
-  log(room, `${player.name} laid down a ${actualType}.`);
+  const points = totalPoints(cards);
+  player.score += points;
+  log(room, `${player.name} laid down a ${actualType} and scored ${points} points.`);
 }
 
 function addToMeld(room, player, cardIds, meldId) {
@@ -227,21 +222,20 @@ function addToMeld(room, player, cardIds, meldId) {
   const combined = [...meld.cards, ...cards];
   const valid = meld.type === 'set' ? isValidSet(combined) : isValidRun(combined);
   if (!valid) throw new GameError('Those cards cannot be added to the selected meld.');
-  if (room.mustMeldCardId && !cardIds.includes(room.mustMeldCardId)) {
-    throw new GameError('The buried discard you selected must be used in this play.');
-  }
   player.hand = removeCards(player.hand, cardIds);
   meld.cards = sortMeld(combined, meld.type);
-  if (room.mustMeldCardId && cardIds.includes(room.mustMeldCardId)) room.mustMeldCardId = null;
-  log(room, `${player.name} added ${cards.length} card${cards.length === 1 ? '' : 's'} to a meld.`);
+  const points = totalPoints(cards);
+  player.score += points;
+  const owner = playerById(room, meld.ownerId);
+  const ownership = owner && owner.id !== player.id ? ` ${owner.name}'s` : ' their';
+  log(room, `${player.name} added ${cards.length} card${cards.length === 1 ? '' : 's'} to${ownership} meld and scored ${points} points.`);
 }
 
 function discardCard(room, player, cardId) {
-  if (room.mustMeldCardId) throw new GameError('You must meld the buried discard before discarding.');
   const [card] = selectedCards(player, [cardId]);
   player.hand = removeCards(player.hand, [cardId]);
   room.discard.push(card);
-  log(room, `${player.name} discarded ${card.rank} of ${card.suit}.`);
+  log(room, `${player.name} discarded to the pile.`);
   if (player.hand.length === 0) {
     finishRound(room, player);
     return;
@@ -290,7 +284,7 @@ export function applyAction(room, playerId, action) {
         break;
       case 'draw-discard':
         if (room.turnStage !== 'draw') throw new GameError('You have already drawn this turn.');
-        drawDiscard(room, player, action.discardIndex);
+        drawDiscard(room, player);
         break;
       case 'meld':
         if (room.turnStage !== 'play') throw new GameError('Draw a card before laying down cards.');
@@ -325,13 +319,13 @@ export function publicRoom(room, token = null) {
     revision: room.revision,
     currentPlayerId: room.currentPlayerId,
     turnStage: room.turnStage,
-    mustMeldCardId: viewer?.id === room.currentPlayerId ? room.mustMeldCardId : null,
     winnerId: room.winnerId,
     roundWinnerId: room.roundWinnerId,
     roundPoints: room.roundPoints,
     capturedCards: room.status === 'playing' ? [] : room.capturedCards,
     deckCount: room.deck.length,
-    discard: room.discard,
+    discardTop: room.discard.at(-1) || null,
+    discardCount: room.discard.length,
     melds: room.melds,
     log: room.log,
     players: room.players.map((player) => ({
