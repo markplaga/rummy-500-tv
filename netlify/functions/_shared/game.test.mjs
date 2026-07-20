@@ -88,7 +88,7 @@ test('only the top discard is exposed to clients', () => {
   const view = publicRoom(room, 't1');
   assert.equal(view.discardTop.id, 'K-spades');
   assert.equal(view.discardCount, 3);
-  assert.equal(Object.hasOwn(view, 'discard'), false);
+  assert.deepEqual(view.discard.map((c) => c.id), ['K-spades']);
 });
 
 test('drawing from the discard pile takes only its top card', () => {
