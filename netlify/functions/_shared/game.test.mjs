@@ -33,12 +33,13 @@ test('sets require three or four unique suits', () => {
   assert.equal(isValidSet([card('8','clubs'), card('8','diamonds')]), false);
 });
 
-test('two players receive thirteen cards and a discard', () => {
+test('two players receive seven cards and a discard', () => {
   const room = readyRoom();
-  assert.equal(room.players[0].hand.length, 13);
-  assert.equal(room.players[1].hand.length, 13);
+  assert.equal(room.startingHandSize, 7);
+  assert.equal(room.players[0].hand.length, 7);
+  assert.equal(room.players[1].hand.length, 7);
   assert.equal(room.discard.length, 1);
-  assert.equal(room.deck.length, 25);
+  assert.equal(room.deck.length, 37);
 });
 
 test('a player cannot meld every card because a discard is mandatory', () => {
