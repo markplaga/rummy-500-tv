@@ -5,7 +5,7 @@ A two-player, browser-based Rummy 500 game designed for a shared television and 
 ## Game rules in this version
 
 - Two players and one standard 52-card deck
-- Thirteen cards per player
+- Seven cards per player
 - Ace is low only
 - No jokers or wild cards
 - Runs and sets may be laid down after drawing
