@@ -5,19 +5,20 @@ A two-player, browser-based Rummy 500 game designed for a shared television and 
 ## Game rules in this version
 
 - Two players and one standard 52-card deck
-- Seven cards per player
+- Eleven cards per player
 - Ace is low only
 - No jokers or wild cards
 - Runs and sets may be laid down after drawing
-- Cards may be added to existing melds
-- A buried discard must be used immediately in a meld
+- One or more cards may be added to any valid meld, including the other player’s meld
+- Every card laid down or added to a meld scores for the player who played it
+- Only the top discard is visible and may be drawn
 - A player must retain one card to discard and can go out only by discarding the final card
 - The player who goes out scores the value of every card remaining in the opponent's hand
 - First player to 500 points wins
 
 ## Screens
 
-- `/tv` creates and displays a room, QR code, scores, discard top, card counts, and shared melds
+- `/tv` creates and displays a room, QR code, scores, the top discard, card counts, and shared melds
 - `/play?room=ABC123` lets a player join by name and privately manage their hand
 
 ## Development
